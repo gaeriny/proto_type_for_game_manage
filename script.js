@@ -313,21 +313,47 @@ function resetTimer() {
   }
 }
 
-function triggerWhistle() {
-  if (navigator.vibrate) navigator.vibrate(300);
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioContext();
-    const freqs = [2100, 2400]; const now = ctx.currentTime;
-    freqs.forEach(f => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      osc.frequency.setValueAtTime(f, now); gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(now); osc.stop(now + 0.3);
-    });
-  } catch (e) {}
+// 실제 호각 소리 MP3 파일 연결 (무료 오픈 소스 오디오 주소)
+const WHISTLE_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav";
+let whistleAudio = new Audio(WHISTLE_SOUND_URL);
+
+// 모바일 브라우저의 오디오 잠금을 해제하는 안전장치
+function 담보오디오해제() {
+  if (whistleAudio) {
+    whistleAudio.play().then(() => {
+      whistleAudio.pause();
+      whistleAudio.currentTime = 0;
+    }).catch(() => {});
+  }
 }
+
+// 기존 휘슬 함수를 리얼 MP3 재생 방식으로 전면 수정
+function triggerWhistle() {
+  // 진동 기능 (지원되는 기기만)
+  if (navigator.vibrate) navigator.vibrate(300);
+  
+  try {
+    // 소리가 겹치거나 딜레이되지 않도록 재생 위치를 처음으로 리셋 후 재생
+    whistleAudio.pause();
+    whistleAudio.currentTime = 0;
+    
+    // 볼륨 설정 (0.0 ~ 1.0) 너무 크면 0.5 등으로 조절 가능
+    whistleAudio.volume = 0.8; 
+    
+    whistleAudio.play().catch(e => {
+      console.log("오디오 잠금 에러 우회 시도");
+    });
+  } catch (e) {
+    console.error("오디오 재생 실패:", e);
+  }
+}
+
+// [오류 해결 핵심] 사용자가 화면의 탭을 바꿀 때 브라우저의 오디오 잠금을 자동으로 깨워둡니다.
+document.querySelectorAll('nav button, .sports-selector button').forEach(btn => {
+  btn.addEventListener('click', 담보오디오해제);
+  btn.addEventListener('touchstart', 담보오디오해제);
+});
+
 
 // 최초 1회 초기화 렌더링
 renderAllViews();
